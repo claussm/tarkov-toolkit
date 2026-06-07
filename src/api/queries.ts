@@ -155,8 +155,11 @@ export const LOCKS_QUERY = /* GraphQL */ `
     maps {
       name
       locks {
-        lockType
-        needsPower
+        position {
+          x
+          y
+          z
+        }
         key {
           id
         }

@@ -44,11 +44,7 @@ export function ItemCard({ id }: { id: string }) {
   const flea = fleaValue(item)
   const vendor = bestVendorSell(item)
 
-  const lockByMap = new Map<string, number>()
-  for (const e of lockIndex?.get(item.id) ?? []) {
-    lockByMap.set(e.map, (lockByMap.get(e.map) ?? 0) + 1)
-  }
-  const lockMapCounts = [...lockByMap.entries()].sort((a, b) => b[1] - a[1])
+  const lockMaps = lockIndex?.get(item.id) ?? []
 
   return (
     <Card>
@@ -95,16 +91,19 @@ export function ItemCard({ id }: { id: string }) {
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap gap-2">
               {item.properties?.uses != null && (
-                <Badge tone="neutral">{item.properties.uses} uses</Badge>
+                <Badge tone="neutral">
+                  {item.properties.uses} use{item.properties.uses === 1 ? '' : 's'}
+                </Badge>
               )}
-              {lockMapCounts.length > 0 ? (
-                lockMapCounts.map(([map, count]) => (
-                  <Badge key={map} tone="hideout">
-                    {map} · {count} lock{count > 1 ? 's' : ''}
+              {lockMaps.length > 0 ? (
+                lockMaps.map(({ map, count }) => (
+                  <Badge key={map} tone="vendor">
+                    {map}
+                    {count > 1 ? ` ×${count}` : ''}
                   </Badge>
                 ))
               ) : (
-                <span className="text-sm text-neutral-600">No mapped locks found.</span>
+                <span className="text-sm text-neutral-600">No mapped locks.</span>
               )}
             </div>
             {item.wikiLink && (
