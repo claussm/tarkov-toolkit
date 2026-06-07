@@ -83,6 +83,19 @@ export interface TaskSummary {
   taskRequirements: { task: { id: string; name: string } | null }[]
 }
 
+export interface MapPosition {
+  x: number
+  y: number
+  z: number
+}
+
+export interface MapMarkers {
+  normalizedName: string
+  name: string
+  extracts: { name: string | null; faction: string | null; position: MapPosition }[]
+  spawns: { sides: string[] | null; categories: string[] | null; position: MapPosition }[]
+}
+
 export interface Ammo {
   item: {
     id: string

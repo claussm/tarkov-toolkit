@@ -4,6 +4,7 @@ import { ProgressProvider } from './data/ProgressContext'
 import { LookupView } from './features/lookup/LookupView'
 import { ProgressView } from './features/progress/ProgressView'
 import { AmmoView } from './features/ammo/AmmoView'
+import { MapsView } from './features/maps/MapsView'
 
 const queryClient = new QueryClient()
 
@@ -39,7 +40,7 @@ export default function App() {
             {tab === 'lookup' && <LookupView />}
             {tab === 'progress' && <ProgressView />}
             {tab === 'ammo' && <AmmoView />}
-            {tab === 'maps' && <Placeholder name="Interactive maps" milestone="M3" />}
+            {tab === 'maps' && <MapsView />}
           </main>
 
           <footer className="border-t border-neutral-800 px-4 py-1 text-center text-[10px] text-neutral-600">
@@ -48,13 +49,5 @@ export default function App() {
         </div>
       </ProgressProvider>
     </QueryClientProvider>
-  )
-}
-
-function Placeholder({ name, milestone }: { name: string; milestone: string }) {
-  return (
-    <div className="p-12 text-center text-neutral-500">
-      {name} — coming in {milestone}.
-    </div>
   )
 }

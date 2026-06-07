@@ -108,6 +108,33 @@ export const TASKS_QUERY = /* GraphQL */ `
   }
 `
 
+export const MAP_MARKERS_QUERY = /* GraphQL */ `
+  query MapMarkers {
+    maps {
+      normalizedName
+      name
+      extracts {
+        name
+        faction
+        position {
+          x
+          y
+          z
+        }
+      }
+      spawns {
+        sides
+        categories
+        position {
+          x
+          y
+          z
+        }
+      }
+    }
+  }
+`
+
 export const AMMO_QUERY = /* GraphQL */ `
   query Ammo {
     ammo {
