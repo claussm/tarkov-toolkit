@@ -1,0 +1,134 @@
+// GraphQL query documents. Field names verified against the live schema (BUILD_PLAN.md §5).
+
+export const ITEM_INDEX_QUERY = /* GraphQL */ `
+  query ItemIndex {
+    items {
+      id
+      name
+      shortName
+      normalizedName
+      iconLink
+      avg24hPrice
+      lastLowPrice
+      basePrice
+      types
+    }
+  }
+`
+
+export const HIDEOUT_REQUIREMENTS_QUERY = /* GraphQL */ `
+  query HideoutRequirements {
+    hideoutStations {
+      id
+      name
+      normalizedName
+      levels {
+        level
+        itemRequirements {
+          item {
+            id
+            name
+          }
+          count
+        }
+      }
+    }
+  }
+`
+
+export const ITEM_DETAIL_QUERY = /* GraphQL */ `
+  query ItemDetail($id: ID!) {
+    item(id: $id) {
+      id
+      name
+      shortName
+      wikiLink
+      iconLink
+      image512pxLink
+      basePrice
+      avg24hPrice
+      lastLowPrice
+      high24hPrice
+      changeLast48hPercent
+      fleaMarketFee
+      sellFor {
+        vendor {
+          name
+          normalizedName
+        }
+        priceRUB
+      }
+      usedInTasks {
+        id
+        name
+        wikiLink
+        trader {
+          name
+        }
+        minPlayerLevel
+        kappaRequired
+        objectives {
+          __typename
+          ... on TaskObjectiveItem {
+            item {
+              id
+              name
+            }
+            items {
+              id
+              name
+            }
+            count
+            foundInRaid
+          }
+        }
+      }
+    }
+  }
+`
+
+export const TASKS_QUERY = /* GraphQL */ `
+  query Tasks {
+    tasks {
+      id
+      name
+      wikiLink
+      minPlayerLevel
+      kappaRequired
+      trader {
+        name
+      }
+      taskRequirements {
+        task {
+          id
+          name
+        }
+      }
+    }
+  }
+`
+
+export const AMMO_QUERY = /* GraphQL */ `
+  query Ammo {
+    ammo {
+      item {
+        id
+        name
+        shortName
+        iconLink
+        avg24hPrice
+      }
+      caliber
+      ammoType
+      damage
+      armorDamage
+      penetrationPower
+      fragmentationChance
+      projectileCount
+      accuracyModifier
+      recoilModifier
+      initialSpeed
+      tracer
+    }
+  }
+`
