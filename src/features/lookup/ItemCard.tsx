@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useItemDetail } from '../../data/useItemDetail'
 import { useHideoutIndex } from '../../data/useHideoutIndex'
+import { useLockIndex } from '../../data/useLockIndex'
 import { useProgress } from '../../data/ProgressContext'
 import { Badge } from '../../components/Badge'
 import { bestVendorSell, fleaValue, keepSellVerdict, questItemCount, type VerdictTone } from '../../lib/heuristics'
@@ -10,6 +11,8 @@ import { hideoutWikiUrl } from '../../lib/wiki'
 export function ItemCard({ id }: { id: string }) {
   const { data: item, isLoading } = useItemDetail(id)
   const { data: hideout } = useHideoutIndex()
+  const isKey = item?.types?.includes('keys') ?? false
+  const { data: lockIndex } = useLockIndex(isKey)
   const { isTaskDone, toggleTask, isHideoutBuilt, toggleHideout } = useProgress()
 
   if (isLoading) {
@@ -40,6 +43,12 @@ export function ItemCard({ id }: { id: string }) {
   })
   const flea = fleaValue(item)
   const vendor = bestVendorSell(item)
+
+  const lockByMap = new Map<string, number>()
+  for (const e of lockIndex?.get(item.id) ?? []) {
+    lockByMap.set(e.map, (lockByMap.get(e.map) ?? 0) + 1)
+  }
+  const lockMapCounts = [...lockByMap.entries()].sort((a, b) => b[1] - a[1])
 
   return (
     <Card>
@@ -80,6 +89,37 @@ export function ItemCard({ id }: { id: string }) {
           </Badge>
         )}
       </div>
+
+      {isKey && (
+        <Section title="Behind the lock">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              {item.properties?.uses != null && (
+                <Badge tone="neutral">{item.properties.uses} uses</Badge>
+              )}
+              {lockMapCounts.length > 0 ? (
+                lockMapCounts.map(([map, count]) => (
+                  <Badge key={map} tone="hideout">
+                    {map} · {count} lock{count > 1 ? 's' : ''}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-sm text-neutral-600">No mapped locks found.</span>
+              )}
+            </div>
+            {item.wikiLink && (
+              <a
+                href={`${item.wikiLink}#Behind_the_Lock`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex w-fit items-center gap-1 rounded bg-amber-900/40 px-3 py-1.5 text-sm text-amber-200 ring-1 ring-inset ring-amber-700/50 hover:bg-amber-900/60"
+              >
+                View loot behind the lock on the wiki ↗
+              </a>
+            )}
+          </div>
+        </Section>
+      )}
 
       <Section title={`Quests — ${stillQuests} still needed / ${quests.length}`}>
         {quests.length === 0 ? (

@@ -35,10 +35,16 @@ export interface UsedInTask {
   objectives: TaskObjective[]
 }
 
+export interface ItemKeyProperties {
+  __typename: string
+  uses?: number | null
+}
+
 export interface ItemDetail {
   id: string
   name: string
   shortName: string
+  types: string[]
   wikiLink: string | null
   iconLink: string | null
   image512pxLink: string | null
@@ -48,6 +54,7 @@ export interface ItemDetail {
   high24hPrice: number | null
   changeLast48hPercent: number | null
   fleaMarketFee: number | null
+  properties: ItemKeyProperties | null
   sellFor: VendorPrice[]
   usedInTasks: UsedInTask[]
 }

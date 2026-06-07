@@ -42,6 +42,7 @@ export const ITEM_DETAIL_QUERY = /* GraphQL */ `
       id
       name
       shortName
+      types
       wikiLink
       iconLink
       image512pxLink
@@ -51,6 +52,12 @@ export const ITEM_DETAIL_QUERY = /* GraphQL */ `
       high24hPrice
       changeLast48hPercent
       fleaMarketFee
+      properties {
+        __typename
+        ... on ItemPropertiesKey {
+          uses
+        }
+      }
       sellFor {
         vendor {
           name
@@ -137,6 +144,21 @@ export const MAP_MARKERS_QUERY = /* GraphQL */ `
           x
           y
           z
+        }
+      }
+    }
+  }
+`
+
+export const LOCKS_QUERY = /* GraphQL */ `
+  query Locks {
+    maps {
+      name
+      locks {
+        lockType
+        needsPower
+        key {
+          id
         }
       }
     }
