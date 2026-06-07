@@ -14,7 +14,7 @@ export function useMapMarkers() {
   return useQuery({
     queryKey: ['mapMarkers'],
     queryFn: () =>
-      cachedFetch('tt:mapMarkers:v1', ONE_DAY, () =>
+      cachedFetch('tt:mapMarkers:v2', ONE_DAY, () =>
         gqlClient.request<MapsResponse>(MAP_MARKERS_QUERY).then((r) => r.maps),
       ),
     staleTime: ONE_DAY,

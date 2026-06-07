@@ -94,6 +94,7 @@ export interface MapMarkers {
   name: string
   extracts: { name: string | null; faction: string | null; position: MapPosition }[]
   spawns: { sides: string[] | null; categories: string[] | null; position: MapPosition }[]
+  transits: { description: string | null; position: MapPosition }[]
 }
 
 export interface Ammo {

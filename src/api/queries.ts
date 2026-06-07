@@ -131,6 +131,14 @@ export const MAP_MARKERS_QUERY = /* GraphQL */ `
           z
         }
       }
+      transits {
+        description
+        position {
+          x
+          y
+          z
+        }
+      }
     }
   }
 `

@@ -41,6 +41,7 @@ export function MapView({ config, markers }: { config: MapConfig; markers: MapMa
     map.fitBounds(bounds)
 
     const extractLayer = L.layerGroup()
+    const transitLayer = L.layerGroup()
     const spawnLayer = L.layerGroup()
 
     for (const ex of markers?.extracts ?? []) {
@@ -54,6 +55,24 @@ export function MapView({ config, markers }: { config: MapConfig; markers: MapMa
       })
         .bindTooltip(ex.name ?? 'Extract', { direction: 'top' })
         .addTo(extractLayer)
+    }
+
+    for (const tr of markers?.transits ?? []) {
+      const label = (tr.description ?? 'Transit').replace(/^Transit to /i, '→ ')
+      L.circleMarker(pos(tr.position), {
+        radius: 7,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#22d3ee',
+        fillOpacity: 0.9,
+      })
+        .bindTooltip(label, {
+          permanent: true,
+          direction: 'right',
+          className: 'transit-tooltip',
+          offset: [6, 0],
+        })
+        .addTo(transitLayer)
     }
 
     for (const sp of markers?.spawns ?? []) {
@@ -72,9 +91,14 @@ export function MapView({ config, markers }: { config: MapConfig; markers: MapMa
     }
 
     extractLayer.addTo(map)
-    spawnLayer.addTo(map)
+    transitLayer.addTo(map)
+    // Spawns are off by default — toggle them on in the layer control.
     L.control
-      .layers(undefined, { Extracts: extractLayer, Spawns: spawnLayer }, { collapsed: false })
+      .layers(
+        undefined,
+        { Transits: transitLayer, Extracts: extractLayer, Spawns: spawnLayer },
+        { collapsed: false },
+      )
       .addTo(map)
 
     const t = window.setTimeout(() => {

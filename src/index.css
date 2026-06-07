@@ -12,3 +12,21 @@ body {
   color: #f5f5f5;
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+
+/* Transit marker labels on the maps */
+.leaflet-tooltip.transit-tooltip {
+  background: #0e7490;
+  color: #ecfeff;
+  border: 1px solid #22d3ee;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 600;
+  font-size: 11px;
+  box-shadow: none;
+}
+.leaflet-tooltip-right.transit-tooltip::before {
+  border-right-color: #22d3ee;
+}
+.leaflet-tooltip-left.transit-tooltip::before {
+  border-left-color: #22d3ee;
+}
