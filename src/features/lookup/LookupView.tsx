@@ -1,12 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useItemIndex } from '../../data/useItemIndex'
 import { ItemCard } from './ItemCard'
 import type { ItemIndexEntry } from '../../api/types'
 
-export function LookupView() {
+export function LookupView({ focusSignal = 0 }: { focusSignal?: number }) {
   const { items, fuse, isLoading, isError, refetch } = useItemIndex()
   const [q, setQ] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Focus + select the search box on mount and whenever the global hotkey fires.
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [focusSignal])
 
   const results = useMemo<ItemIndexEntry[]>(() => {
     if (!fuse || q.trim().length < 2) return []
@@ -17,9 +24,12 @@ export function LookupView() {
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
       <div className="relative">
         <input
-          autoFocus
+          ref={inputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setQ('')
+          }}
           placeholder={
             isLoading
               ? 'Loading item database…'

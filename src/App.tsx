@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgressProvider } from './data/ProgressContext'
 import { LookupView } from './features/lookup/LookupView'
@@ -12,8 +12,41 @@ type Tab = 'lookup' | 'progress' | 'ammo' | 'maps'
 
 const TABS: Tab[] = ['lookup', 'progress', 'ammo', 'maps']
 
+const TAB_STORAGE_KEY = 'tt:lastTab'
+
+function loadInitialTab(): Tab {
+  const stored = localStorage.getItem(TAB_STORAGE_KEY)
+  return stored && (TABS as string[]).includes(stored) ? (stored as Tab) : 'lookup'
+}
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>('lookup')
+  const [tab, setTab] = useState<Tab>(loadInitialTab)
+  // Bumped whenever the user requests focus on the search box via the global hotkey.
+  const [focusSignal, setFocusSignal] = useState(0)
+
+  useEffect(() => {
+    localStorage.setItem(TAB_STORAGE_KEY, tab)
+  }, [tab])
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const cmdK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'
+      const target = e.target as HTMLElement | null
+      const typing =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+      // "/" focuses search, but not while typing into a field (so you can type a literal slash).
+      const slash = e.key === '/' && !typing
+      if (cmdK || slash) {
+        e.preventDefault()
+        setTab('lookup')
+        setFocusSignal((n) => n + 1)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -37,7 +70,7 @@ export default function App() {
           </header>
 
           <main className="flex-1 overflow-auto">
-            {tab === 'lookup' && <LookupView />}
+            {tab === 'lookup' && <LookupView focusSignal={focusSignal} />}
             {tab === 'progress' && <ProgressView />}
             {tab === 'ammo' && <AmmoView />}
             {tab === 'maps' && <MapsView />}
