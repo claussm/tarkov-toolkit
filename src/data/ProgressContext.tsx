@@ -23,7 +23,10 @@ export interface ProgressApi extends ProgressState {
   isTaskDone: (id: string) => boolean
   toggleTask: (id: string) => void
   isHideoutBuilt: (levelId: string) => boolean
-  toggleHideout: (levelId: string) => void
+  // Cascades: building a level also marks every lower level of the same station;
+  // un-building it clears every higher level. `stationLevels` is the station's full
+  // list of level numbers.
+  setHideoutLevel: (stationId: string, level: number, stationLevels: number[]) => void
   setPlayerLevel: (n: number) => void
   resetAll: () => void
   exportProgress: () => string
@@ -82,10 +85,18 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         return { ...s, completedTasks: next }
       }),
     isHideoutBuilt: (levelId) => state.builtHideoutLevels.has(levelId),
-    toggleHideout: (levelId) =>
+    // Hideout levels are sequential — you can't have L2 without L1. So building a
+    // level marks every lower level too, and un-building it clears every higher one.
+    setHideoutLevel: (stationId, level, stationLevels) =>
       setState((s) => {
         const next = new Set(s.builtHideoutLevels)
-        next.has(levelId) ? next.delete(levelId) : next.add(levelId)
+        const building = !next.has(`${stationId}-${level}`)
+        for (const l of stationLevels) {
+          if (building ? l <= level : l >= level) {
+            const id = `${stationId}-${l}`
+            building ? next.add(id) : next.delete(id)
+          }
+        }
         return { ...s, builtHideoutLevels: next }
       }),
     setPlayerLevel: (n) => setState((s) => ({ ...s, playerLevel: n })),

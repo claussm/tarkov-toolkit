@@ -23,7 +23,7 @@ export function ProgressView() {
     isTaskDone,
     toggleTask,
     isHideoutBuilt,
-    toggleHideout,
+    setHideoutLevel,
     setPlayerLevel,
     resetAll,
     exportProgress,
@@ -242,7 +242,9 @@ export function ProgressView() {
                       return (
                         <button
                           key={levelId}
-                          onClick={() => toggleHideout(levelId)}
+                          onClick={() =>
+                            setHideoutLevel(st.id, lvl.level, st.levels.map((l) => l.level))
+                          }
                           className={`rounded px-2 py-1 text-xs ring-1 ring-inset ${
                             built
                               ? 'bg-emerald-900/50 text-emerald-200 ring-emerald-700/50'

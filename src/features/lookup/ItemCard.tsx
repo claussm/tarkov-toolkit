@@ -13,7 +13,7 @@ export function ItemCard({ id }: { id: string }) {
   const { data: hideout } = useHideoutIndex()
   const isKey = item?.types?.includes('keys') ?? false
   const { data: lockIndex } = useLockIndex(isKey)
-  const { isTaskDone, toggleTask, isHideoutBuilt, toggleHideout } = useProgress()
+  const { isTaskDone, toggleTask, isHideoutBuilt, setHideoutLevel } = useProgress()
 
   if (isLoading) {
     return (
@@ -180,7 +180,13 @@ export function ItemCard({ id }: { id: string }) {
                   <input
                     type="checkbox"
                     checked={built}
-                    onChange={() => toggleHideout(h.levelId)}
+                    onChange={() =>
+                      setHideoutLevel(
+                        h.stationId,
+                        h.level,
+                        hideout?.stations.find((s) => s.id === h.stationId)?.levels.map((l) => l.level) ?? [h.level],
+                      )
+                    }
                     className="accent-emerald-500"
                   />
                   <span className={`flex-1 text-sm ${built ? 'line-through' : ''}`}>
