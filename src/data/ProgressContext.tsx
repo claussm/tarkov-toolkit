@@ -3,6 +3,9 @@ import { get, set } from 'idb-keyval'
 
 const STORE_KEY = 'tt:progress:v1'
 
+// Tag written into exported files so import can reject unrelated JSON.
+const EXPORT_FORMAT = 'tarkov-toolkit-progress'
+
 interface PersistShape {
   completedTasks: string[]
   builtHideoutLevels: string[]
@@ -23,6 +26,8 @@ export interface ProgressApi extends ProgressState {
   toggleHideout: (levelId: string) => void
   setPlayerLevel: (n: number) => void
   resetAll: () => void
+  exportProgress: () => string
+  importProgress: (raw: string) => { ok: boolean; error?: string }
 }
 
 const Ctx = createContext<ProgressApi | null>(null)
@@ -91,6 +96,41 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         builtHideoutLevels: new Set(),
         playerLevel: 1,
       })),
+    exportProgress: () =>
+      JSON.stringify(
+        {
+          format: EXPORT_FORMAT,
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          completedTasks: [...state.completedTasks],
+          builtHideoutLevels: [...state.builtHideoutLevels],
+          playerLevel: state.playerLevel,
+        },
+        null,
+        2,
+      ),
+    importProgress: (raw) => {
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(raw)
+      } catch {
+        return { ok: false, error: 'That file isn’t valid JSON.' }
+      }
+      const obj = parsed as Partial<PersistShape> & { format?: unknown }
+      if (!obj || obj.format !== EXPORT_FORMAT) {
+        return { ok: false, error: 'Not a Tarkov Toolkit progress export.' }
+      }
+      const onlyStrings = (v: unknown): string[] =>
+        Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+      const lvl = Number(obj.playerLevel)
+      setState((s) => ({
+        ...s,
+        completedTasks: new Set(onlyStrings(obj.completedTasks)),
+        builtHideoutLevels: new Set(onlyStrings(obj.builtHideoutLevels)),
+        playerLevel: Number.isFinite(lvl) ? Math.max(1, Math.min(79, lvl)) : 1,
+      }))
+      return { ok: true }
+    },
   }
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>

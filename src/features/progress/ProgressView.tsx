@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTasks } from '../../data/useTasks'
 import { useHideoutIndex } from '../../data/useHideoutIndex'
 import { useProgress } from '../../data/ProgressContext'
@@ -26,11 +26,38 @@ export function ProgressView() {
     toggleHideout,
     setPlayerLevel,
     resetAll,
+    exportProgress,
+    importProgress,
   } = useProgress()
 
   const [filter, setFilter] = useState('')
   const [onlyAvailable, setOnlyAvailable] = useState(false)
   const [section, setSection] = useState<'quests' | 'hideout'>('quests')
+  const [ioMsg, setIoMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleExport() {
+    const blob = new Blob([exportProgress()], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tarkov-progress-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    setIoMsg({ ok: true, text: 'Progress backed up to a downloaded file.' })
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-importing the same file later
+    if (!file) return
+    const result = importProgress(await file.text())
+    setIoMsg(
+      result.ok
+        ? { ok: true, text: 'Progress imported from file.' }
+        : { ok: false, text: result.error ?? 'Could not import that file.' },
+    )
+  }
 
   const byTrader = useMemo(() => {
     const map = new Map<string, TaskSummary[]>()
@@ -71,17 +98,45 @@ export function ProgressView() {
         <span className="text-sm text-neutral-400">
           {doneCount}/{totalTasks} quests · {builtHideoutLevels.size} hideout levels
         </span>
-        <button
-          onClick={() => {
-            if (confirm('Reset ALL local progress (quests, hideout, level)? This cannot be undone.')) {
-              resetAll()
-            }
-          }}
-          className="ml-auto rounded border border-red-800 px-3 py-1 text-sm text-red-300 hover:bg-red-950"
-        >
-          Reset progress (wipe day)
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+          <button
+            onClick={handleExport}
+            title="Download your progress as a backup file you can keep or move to another device"
+            className="rounded border border-neutral-700 px-3 py-1 text-sm text-neutral-300 hover:bg-neutral-800"
+          >
+            Export
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            title="Load progress from a previously exported file (replaces current progress)"
+            className="rounded border border-neutral-700 px-3 py-1 text-sm text-neutral-300 hover:bg-neutral-800"
+          >
+            Import
+          </button>
+          <button
+            onClick={() => {
+              if (confirm('Reset ALL local progress (quests, hideout, level)? This cannot be undone.')) {
+                resetAll()
+                setIoMsg(null)
+              }
+            }}
+            className="rounded border border-red-800 px-3 py-1 text-sm text-red-300 hover:bg-red-950"
+          >
+            Reset progress (wipe day)
+          </button>
+        </div>
       </div>
+
+      {ioMsg && (
+        <p className={`text-xs ${ioMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{ioMsg.text}</p>
+      )}
 
       <div className="flex gap-1">
         <SectionTab active={section === 'quests'} onClick={() => setSection('quests')}>

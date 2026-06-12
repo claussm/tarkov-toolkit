@@ -5,6 +5,7 @@ import { LookupView } from './features/lookup/LookupView'
 import { ProgressView } from './features/progress/ProgressView'
 import { AmmoView } from './features/ammo/AmmoView'
 import { MapsView } from './features/maps/MapsView'
+import { HelpDialog } from './components/HelpDialog'
 
 const queryClient = new QueryClient()
 
@@ -23,6 +24,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>(loadInitialTab)
   // Bumped whenever the user requests focus on the search box via the global hotkey.
   const [focusSignal, setFocusSignal] = useState(0)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(TAB_STORAGE_KEY, tab)
@@ -38,6 +40,12 @@ export default function App() {
         target?.isContentEditable
       // "/" focuses search, but not while typing into a field (so you can type a literal slash).
       const slash = e.key === '/' && !typing
+      // "?" opens help, but not while typing into a field.
+      if (e.key === '?' && !typing) {
+        e.preventDefault()
+        setHelpOpen(true)
+        return
+      }
       if (cmdK || slash) {
         e.preventDefault()
         setTab('lookup')
@@ -67,7 +75,17 @@ export default function App() {
                 </button>
               ))}
             </nav>
+            <button
+              onClick={() => setHelpOpen(true)}
+              title="Help & about (?)"
+              aria-label="Help and about"
+              className="ml-auto h-6 w-6 rounded-full border border-neutral-700 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
+            >
+              ?
+            </button>
           </header>
+
+          {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
 
           <main className="flex-1 overflow-auto">
             {tab === 'lookup' && <LookupView focusSignal={focusSignal} />}
