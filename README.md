@@ -3,7 +3,7 @@
 A second-monitor companion for **Escape from Tarkov**. One window, glanceable, keyboard-first —
 item lookup, an ammo chart, and interactive maps. Replaces the "ten browser tabs" workflow.
 
-> **Live:** _<add your Cloudflare URL here once deployed, e.g. https://tarkov-toolkit.you.workers.dev>_
+> **Live:** https://tarkov-toolkit.cloud-flare-061.workers.dev/
 
 It's a static web app that talks directly to the free, public [tarkov.dev](https://tarkov.dev) API —
 no backend, no account, no API key. Open the link and use it; optionally **install** it from your
