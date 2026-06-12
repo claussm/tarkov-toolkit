@@ -1,0 +1,12 @@
+{
+  // Cloudflare Workers config — serves the built static site (Vite `dist/`) as
+  // assets-only (no server-side Worker code). See https://developers.cloudflare.com/workers/static-assets/
+  "name": "tarkov-toolkit",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./dist",
+    // App navigates via in-app tabs, not URLs; serve index.html for any unknown
+    // path so deep links / refreshes never 404.
+    "not_found_handling": "single-page-application"
+  }
+}
