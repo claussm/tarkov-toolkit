@@ -49,3 +49,30 @@ export function penTier(pen: number): PenTier {
   if (pen >= 10) return { label: 'low', text: 'text-red-200', bg: 'bg-red-900/40' }
   return { label: 'very low', text: 'text-neutral-400', bg: 'bg-neutral-800/60' }
 }
+
+// The six EFT body-armor protection classes.
+export const ARMOR_CLASSES = [1, 2, 3, 4, 5, 6] as const
+
+// First-shot penetration chance (0–100) of a round against a *fresh*
+// (full-durability) armor of the given class. EFT's penetration curve crosses
+// ~50% around Pen = class×10 and spans ~5%→95% across the ±10 band either side
+// (community-reverse-engineered rule of thumb; see eft-ammo / the Ballistics wiki).
+// Modelled as a logistic centred at class×10 with scale tuned so ±10 ≈ 5/95%.
+export function penChance(pen: number, armorClass: number): number {
+  const x = (pen - armorClass * 10) / 3.4
+  return 100 / (1 + Math.exp(-x))
+}
+
+export interface PenCell {
+  text: string
+  bg: string
+}
+
+// Cell coloring for a per-class penetration chance: green pens / yellow marginal
+// / red won't. Bands are narrow because the real pen curve is steep — a round
+// mostly either defeats a class or it doesn't.
+export function penCellTier(chance: number): PenCell {
+  if (chance >= 65) return { text: 'text-emerald-200', bg: 'bg-emerald-900/60' }
+  if (chance >= 30) return { text: 'text-yellow-200', bg: 'bg-yellow-900/40' }
+  return { text: 'text-red-400/70', bg: 'bg-red-950/40' }
+}
