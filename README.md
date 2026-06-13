@@ -3,6 +3,10 @@
 A second-monitor companion for **Escape from Tarkov**. One window, glanceable, keyboard-first —
 item lookup, an ammo chart, and interactive maps. Replaces the "ten browser tabs" workflow.
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Tarkov Toolkit — item lookup, ammo chart, and maps" width="800">
+</p>
+
 > **Live:** https://tarkov-toolkit.cloud-flare-061.workers.dev/
 
 It's a static web app that talks directly to the free, public [tarkov.dev](https://tarkov.dev) API —
