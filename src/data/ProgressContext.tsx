@@ -22,6 +22,8 @@ interface ProgressState {
 export interface ProgressApi extends ProgressState {
   isTaskDone: (id: string) => boolean
   toggleTask: (id: string) => void
+  completeMany: (ids: string[]) => void
+  uncompleteMany: (ids: string[]) => void
   isHideoutBuilt: (levelId: string) => boolean
   // Cascades: building a level also marks every lower level of the same station;
   // un-building it clears every higher level. `stationLevels` is the station's full
@@ -82,6 +84,18 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       setState((s) => {
         const next = new Set(s.completedTasks)
         next.has(id) ? next.delete(id) : next.add(id)
+        return { ...s, completedTasks: next }
+      }),
+    completeMany: (ids) =>
+      setState((s) => {
+        const next = new Set(s.completedTasks)
+        for (const id of ids) next.add(id)
+        return { ...s, completedTasks: next }
+      }),
+    uncompleteMany: (ids) =>
+      setState((s) => {
+        const next = new Set(s.completedTasks)
+        for (const id of ids) next.delete(id)
         return { ...s, completedTasks: next }
       }),
     isHideoutBuilt: (levelId) => state.builtHideoutLevels.has(levelId),

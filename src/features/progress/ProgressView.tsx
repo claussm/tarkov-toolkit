@@ -5,6 +5,26 @@ import { useProgress } from '../../data/ProgressContext'
 import { hideoutWikiUrl } from '../../lib/wiki'
 import type { TaskSummary } from '../../api/types'
 
+// Rough in-game trader ordering so the tabs read the way the Tasks screen does.
+// Matched case-insensitively; unknown traders fall to the end, alphabetically.
+const TRADER_ORDER = [
+  'prapor',
+  'therapist',
+  'fence',
+  'skier',
+  'peacekeeper',
+  'mechanic',
+  'ragman',
+  'jaeger',
+  'ref',
+  'lightkeeper',
+  'btr driver',
+]
+const traderRank = (name: string) => {
+  const i = TRADER_ORDER.indexOf(name.toLowerCase())
+  return i === -1 ? TRADER_ORDER.length : i
+}
+
 function isAvailable(t: TaskSummary, completed: Set<string>, playerLevel: number): boolean {
   if (t.minPlayerLevel && playerLevel < t.minPlayerLevel) return false
   for (const req of t.taskRequirements ?? []) {
@@ -22,6 +42,8 @@ export function ProgressView() {
     playerLevel,
     isTaskDone,
     toggleTask,
+    completeMany,
+    uncompleteMany,
     isHideoutBuilt,
     setHideoutLevel,
     setPlayerLevel,
@@ -31,8 +53,13 @@ export function ProgressView() {
   } = useProgress()
 
   const [filter, setFilter] = useState('')
-  const [onlyAvailable, setOnlyAvailable] = useState(false)
+  const [hideCompleted, setHideCompleted] = useState(false)
+  const [hideLocked, setHideLocked] = useState(false)
+  const [trader, setTrader] = useState('') // '' resolves to the first trader once tasks load
   const [section, setSection] = useState<'quests' | 'hideout'>('quests')
+  // Records whether Shift was held on the most recent checkbox click, read by
+  // onChange to decide between a single toggle and a whole-chain cascade.
+  const shiftHeld = useRef(false)
   const [ioMsg, setIoMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -59,13 +86,97 @@ export function ProgressView() {
     )
   }
 
+  // Build the prerequisite graph once per task list. `prereqsOf` returns every
+  // task that must be done before `id` (transitively); `dependentsOf` returns
+  // every task that requires `id` (transitively). Used by the cascade actions.
+  const { prereqsOf, dependentsOf } = useMemo(() => {
+    const forward = new Map<string, string[]>() // id -> direct prerequisites
+    const reverse = new Map<string, string[]>() // id -> direct dependents
+    const known = new Set((tasks ?? []).map((t) => t.id))
+    for (const t of tasks ?? []) {
+      const reqs = (t.taskRequirements ?? [])
+        .map((r) => r.task?.id)
+        .filter((id): id is string => !!id && known.has(id))
+      forward.set(t.id, reqs)
+      for (const r of reqs) {
+        const arr = reverse.get(r) ?? []
+        arr.push(t.id)
+        reverse.set(r, arr)
+      }
+    }
+    const closure = (start: string, edges: Map<string, string[]>) => {
+      const seen = new Set<string>()
+      const stack = [...(edges.get(start) ?? [])]
+      while (stack.length) {
+        const cur = stack.pop()!
+        if (seen.has(cur)) continue
+        seen.add(cur)
+        for (const n of edges.get(cur) ?? []) stack.push(n)
+      }
+      return [...seen]
+    }
+    return {
+      prereqsOf: (id: string) => closure(id, forward),
+      dependentsOf: (id: string) => closure(id, reverse),
+    }
+  }, [tasks])
+
+  function cascadeComplete(id: string) {
+    completeMany([id, ...prereqsOf(id)])
+  }
+  function cascadeUncomplete(id: string) {
+    uncompleteMany([id, ...dependentsOf(id)])
+  }
+  // "I'm on this quest": everything it requires is done, but the quest itself
+  // stays active (unchecked). Mirrors reading your in-game active quest log.
+  function markActive(id: string) {
+    completeMany(prereqsOf(id))
+  }
+
+  // Human-readable reasons a quest is currently locked (unmet prereqs / level).
+  function lockReasons(t: TaskSummary): string[] {
+    const out: string[] = []
+    if (t.minPlayerLevel && playerLevel < t.minPlayerLevel)
+      out.push(`reach level ${t.minPlayerLevel}`)
+    for (const req of t.taskRequirements ?? []) {
+      if (req.task && !completedTasks.has(req.task.id)) out.push(req.task.name)
+    }
+    return out
+  }
+
+  // One entry per trader with progress counts — drives the tab bar. Independent
+  // of the filter/toggles so tabs and their counts stay stable as you work.
+  const traderTabs = useMemo(() => {
+    const counts = new Map<string, { done: number; total: number }>()
+    for (const t of tasks ?? []) {
+      const key = t.trader?.name ?? 'Other'
+      const c = counts.get(key) ?? { done: 0, total: 0 }
+      c.total++
+      if (completedTasks.has(t.id)) c.done++
+      counts.set(key, c)
+    }
+    return [...counts.entries()]
+      .map(([name, c]) => ({ name, ...c }))
+      .sort((a, b) => traderRank(a.name) - traderRank(b.name) || a.name.localeCompare(b.name))
+  }, [tasks, completedTasks])
+
+  // Resolve the selected trader: default to the first one until the user picks.
+  const activeTrader =
+    trader && (trader === 'All' || traderTabs.some((t) => t.name === trader))
+      ? trader
+      : (traderTabs[0]?.name ?? 'All')
+
   const byTrader = useMemo(() => {
     const map = new Map<string, TaskSummary[]>()
     const f = filter.trim().toLowerCase()
     for (const t of tasks ?? []) {
       if (f && !t.name.toLowerCase().includes(f)) continue
-      if (onlyAvailable && !isAvailable(t, completedTasks, playerLevel)) continue
       const key = t.trader?.name ?? 'Other'
+      if (activeTrader !== 'All' && key !== activeTrader) continue
+      const done = completedTasks.has(t.id)
+      const available = isAvailable(t, completedTasks, playerLevel)
+      if (hideCompleted && done) continue
+      if (hideLocked && !done && !available) continue
       const arr = map.get(key) ?? []
       arr.push(t)
       map.set(key, arr)
@@ -73,8 +184,8 @@ export function ProgressView() {
     for (const arr of map.values()) {
       arr.sort((a, b) => (a.minPlayerLevel ?? 0) - (b.minPlayerLevel ?? 0))
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [tasks, filter, onlyAvailable, completedTasks, playerLevel])
+    return [...map.entries()].sort((a, b) => traderRank(a[0]) - traderRank(b[0]))
+  }, [tasks, filter, activeTrader, hideCompleted, hideLocked, completedTasks, playerLevel])
 
   const doneCount = completedTasks.size
   const totalTasks = tasks?.length ?? 0
@@ -149,6 +260,24 @@ export function ProgressView() {
 
       {section === 'quests' && (
         <>
+          <div className="flex flex-wrap gap-1">
+            <TraderTab active={activeTrader === 'All'} onClick={() => setTrader('All')}>
+              All
+            </TraderTab>
+            {traderTabs.map((tt) => (
+              <TraderTab
+                key={tt.name}
+                active={activeTrader === tt.name}
+                onClick={() => setTrader(tt.name)}
+              >
+                {tt.name}
+                <span className="ml-1 text-[10px] opacity-70">
+                  {tt.done}/{tt.total}
+                </span>
+              </TraderTab>
+            ))}
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <input
               value={filter}
@@ -159,24 +288,49 @@ export function ProgressView() {
             <label className="flex items-center gap-2 text-sm text-neutral-400">
               <input
                 type="checkbox"
-                checked={onlyAvailable}
-                onChange={(e) => setOnlyAvailable(e.target.checked)}
+                checked={hideCompleted}
+                onChange={(e) => setHideCompleted(e.target.checked)}
                 className="accent-emerald-500"
               />
-              Only available now
+              Hide completed
+            </label>
+            <label className="flex items-center gap-2 text-sm text-neutral-400">
+              <input
+                type="checkbox"
+                checked={hideLocked}
+                onChange={(e) => setHideLocked(e.target.checked)}
+                className="accent-emerald-500"
+              />
+              Hide locked
             </label>
           </div>
 
+          <p className="text-xs text-neutral-500">
+            Tip: go down your in-game active quest list and click{' '}
+            <span className="text-emerald-400">I’m on this</span> on each one — it marks everything
+            that quest requires as done and leaves the quest itself active. Tick the box once you’ve
+            actually finished a quest. Power moves: shift-click a box to mark its whole chain done
+            through that point, or shift-click a finished quest to roll back from there.
+          </p>
+
           {isLoading && <p className="text-neutral-500">Loading quests…</p>}
 
-          {byTrader.map(([trader, list]) => (
-            <div key={trader}>
-              <h3 className="mb-1 mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                {trader} ({list.length})
-              </h3>
+          {!isLoading && byTrader.length === 0 && (
+            <p className="text-neutral-500">No quests match.</p>
+          )}
+
+          {byTrader.map(([traderName, list]) => (
+            <div key={traderName}>
+              {activeTrader === 'All' && (
+                <h3 className="mb-1 mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  {traderName} ({list.length})
+                </h3>
+              )}
               <ul className="flex flex-col gap-0.5">
                 {list.map((t) => {
                   const done = isTaskDone(t.id)
+                  const locked = !done && !isAvailable(t, completedTasks, playerLevel)
+                  const reasons = locked ? lockReasons(t) : []
                   return (
                     <li
                       key={t.id}
@@ -187,26 +341,57 @@ export function ProgressView() {
                       <input
                         type="checkbox"
                         checked={done}
-                        onChange={() => toggleTask(t.id)}
-                        className="accent-emerald-500"
+                        onClick={(e) => {
+                          shiftHeld.current = e.shiftKey
+                        }}
+                        onChange={() => {
+                          if (shiftHeld.current) {
+                            done ? cascadeUncomplete(t.id) : cascadeComplete(t.id)
+                          } else {
+                            toggleTask(t.id)
+                          }
+                        }}
+                        title="Click to toggle · shift-click to include the whole chain"
+                        className="cursor-pointer accent-emerald-500"
                       />
+                      {locked && (
+                        <span
+                          title={`Locked — needs: ${reasons.join(', ')}`}
+                          className="text-xs text-neutral-600"
+                        >
+                          🔒
+                        </span>
+                      )}
                       {t.wikiLink ? (
                         <a
                           href={t.wikiLink}
                           target="_blank"
                           rel="noreferrer"
                           title="Open on the wiki"
-                          className={`flex-1 hover:text-sky-300 hover:underline ${done ? 'line-through' : ''}`}
+                          className={`flex-1 hover:text-sky-300 hover:underline ${done ? 'line-through' : ''} ${locked ? 'text-neutral-500' : ''}`}
                         >
                           {t.name}
                         </a>
                       ) : (
-                        <span className={`flex-1 ${done ? 'line-through' : ''}`}>{t.name}</span>
+                        <span
+                          className={`flex-1 ${done ? 'line-through' : ''} ${locked ? 'text-neutral-500' : ''}`}
+                        >
+                          {t.name}
+                        </span>
                       )}
                       {t.kappaRequired && <span className="text-[10px] text-amber-500/80">κ</span>}
                       {t.minPlayerLevel ? (
                         <span className="text-xs text-neutral-500">lv{t.minPlayerLevel}</span>
                       ) : null}
+                      {!done && (
+                        <button
+                          onClick={() => markActive(t.id)}
+                          title="I'm on this quest — mark everything it requires as done and leave this one active"
+                          className="shrink-0 rounded px-1 text-xs text-neutral-600 hover:bg-emerald-900/40 hover:text-emerald-300"
+                        >
+                          I’m on this
+                        </button>
+                      )}
                     </li>
                   )
                 })}
@@ -278,6 +463,29 @@ function SectionTab({
       onClick={onClick}
       className={`rounded px-3 py-1 text-sm ${
         active ? 'bg-neutral-700 text-white' : 'text-neutral-400 hover:text-neutral-200'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function TraderTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded px-2.5 py-1 text-xs ring-1 ring-inset ${
+        active
+          ? 'bg-neutral-700 text-white ring-neutral-600'
+          : 'text-neutral-400 ring-neutral-800 hover:bg-neutral-800 hover:text-neutral-200'
       }`}
     >
       {children}
