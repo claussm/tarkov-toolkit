@@ -40,6 +40,22 @@ export interface ItemKeyProperties {
   uses?: number | null
 }
 
+export interface CraftItem {
+  item: { id: string; name: string } | null
+  count: number
+}
+
+// A hideout craft that produces this item (item appears in rewardItems). Crafted
+// outputs come out Found in Raid, so these satisfy FiR quest handovers.
+export interface Craft {
+  id: string
+  level: number
+  duration: number // seconds
+  station: { id: string; name: string; normalizedName: string } | null
+  taskUnlock: { id: string; name: string } | null
+  rewardItems: CraftItem[]
+}
+
 export interface ItemDetail {
   id: string
   name: string
@@ -57,6 +73,7 @@ export interface ItemDetail {
   properties: ItemKeyProperties | null
   sellFor: VendorPrice[]
   usedInTasks: UsedInTask[]
+  craftsFor: Craft[]
 }
 
 export interface HideoutStationLevel {
