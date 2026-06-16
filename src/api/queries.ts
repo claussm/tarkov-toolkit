@@ -90,6 +90,27 @@ export const ITEM_DETAIL_QUERY = /* GraphQL */ `
           }
         }
       }
+      craftsFor {
+        id
+        level
+        duration
+        station {
+          id
+          name
+          normalizedName
+        }
+        taskUnlock {
+          id
+          name
+        }
+        rewardItems {
+          item {
+            id
+            name
+          }
+          count
+        }
+      }
     }
   }
 `

@@ -8,6 +8,7 @@ const tones: Record<string, string> = {
   quest: 'bg-purple-900/60 text-purple-200 ring-purple-700/50',
   hideout: 'bg-orange-900/60 text-orange-200 ring-orange-700/50',
   flea: 'bg-teal-900/60 text-teal-200 ring-teal-700/50',
+  fir: 'bg-rose-900/60 text-rose-200 ring-rose-700/50',
 }
 
 export function Badge({ tone = 'neutral', children }: { tone?: string; children: ReactNode }) {

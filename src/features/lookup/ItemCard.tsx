@@ -4,8 +4,8 @@ import { useHideoutIndex } from '../../data/useHideoutIndex'
 import { useLockIndex } from '../../data/useLockIndex'
 import { useProgress } from '../../data/ProgressContext'
 import { Badge } from '../../components/Badge'
-import { bestVendorSell, fleaValue, keepSellVerdict, questItemCount, type VerdictTone } from '../../lib/heuristics'
-import { formatRub } from '../../lib/format'
+import { bestVendorSell, fleaValue, keepSellVerdict, questItemReq, type VerdictTone } from '../../lib/heuristics'
+import { formatRub, formatDuration } from '../../lib/format'
 import { hideoutWikiUrl } from '../../lib/wiki'
 
 export function ItemCard({ id }: { id: string }) {
@@ -32,9 +32,18 @@ export function ItemCard({ id }: { id: string }) {
 
   const quests = item.usedInTasks ?? []
   const hideoutUses = hideout?.byItemId.get(item.id) ?? []
+  const crafts = item.craftsFor ?? []
 
   const stillQuests = quests.filter((q) => !isTaskDone(q.id)).length
   const stillHideout = hideoutUses.filter((h) => !isHideoutBuilt(h.levelId)).length
+
+  // Total quantity that must be Found in Raid across quests not yet completed.
+  // (Hideout construction never requires FiR, so it doesn't count here.)
+  const firStillNeeded = quests.reduce((sum, q) => {
+    if (isTaskDone(q.id)) return sum
+    const req = questItemReq(q, item.id)
+    return req?.foundInRaid ? sum + (req.count ?? 0) : sum
+  }, 0)
 
   const verdict = keepSellVerdict({
     detail: item,
@@ -84,6 +93,10 @@ export function ItemCard({ id }: { id: string }) {
             {vendor.name} {formatRub(vendor.price)}
           </Badge>
         )}
+        {firStillNeeded > 0 && (
+          <Badge tone="fir">✓ {firStillNeeded} needed Found in Raid</Badge>
+        )}
+        {crafts.length > 0 && <Badge tone="hideout">⚒ craftable in hideout</Badge>}
       </div>
 
       {isKey && (
@@ -127,7 +140,7 @@ export function ItemCard({ id }: { id: string }) {
           <ul className="flex flex-col gap-1">
             {quests.map((q) => {
               const done = isTaskDone(q.id)
-              const reqCount = questItemCount(q, item.id)
+              const req = questItemReq(q, item.id)
               return (
                 <li
                   key={q.id}
@@ -154,7 +167,15 @@ export function ItemCard({ id }: { id: string }) {
                   ) : (
                     <span className={`flex-1 text-sm ${done ? 'line-through' : ''}`}>{q.name}</span>
                   )}
-                  {reqCount != null && <span className="text-xs text-neutral-400">×{reqCount}</span>}
+                  {req?.count != null && <span className="text-xs text-neutral-400">×{req.count}</span>}
+                  {req?.foundInRaid && (
+                    <span
+                      title="Must be Found in Raid"
+                      className="rounded bg-rose-900/60 px-1 text-[10px] font-semibold text-rose-200 ring-1 ring-inset ring-rose-700/50"
+                    >
+                      FiR
+                    </span>
+                  )}
                   {q.trader && <span className="text-xs text-neutral-500">{q.trader.name}</span>}
                 </li>
               )
@@ -208,6 +229,38 @@ export function ItemCard({ id }: { id: string }) {
           </ul>
         )}
       </Section>
+
+      {crafts.length > 0 && (
+        <Section title={`Craftable in hideout — ${crafts.length}`}>
+          <p className="mb-1 text-xs text-neutral-500">Crafted items come out Found in Raid.</p>
+          <ul className="flex flex-col gap-1">
+            {crafts.map((c) => {
+              const out = c.rewardItems.find((r) => r.item?.id === item.id)?.count ?? 1
+              return (
+                <li key={c.id} className="flex items-center gap-2 rounded bg-neutral-800/40 px-2 py-1 text-sm">
+                  <span className="flex-1">
+                    <a
+                      href={hideoutWikiUrl(c.station?.name ?? '')}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Open on the wiki"
+                      className="hover:text-sky-300 hover:underline"
+                    >
+                      {c.station?.name ?? 'Hideout'}
+                    </a>{' '}
+                    <span className="text-neutral-500">L{c.level}</span>
+                    {c.taskUnlock && (
+                      <span className="ml-2 text-xs text-neutral-500">needs: {c.taskUnlock.name}</span>
+                    )}
+                  </span>
+                  {out > 1 && <span className="text-xs text-neutral-400">×{out}</span>}
+                  <span className="text-xs text-neutral-400">~{formatDuration(c.duration)}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </Section>
+      )}
     </Card>
   )
 }

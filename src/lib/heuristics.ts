@@ -25,14 +25,26 @@ export function bestVendorSell(detail: ItemDetail): { name: string; price: numbe
   return best
 }
 
-/** Count of a given item required by a single quest's item-handover objectives. */
-export function questItemCount(task: UsedInTask, itemId: string): number | null {
+export interface QuestItemReq {
+  count: number | null
+  foundInRaid: boolean
+}
+
+/** The item-handover requirement (count + found-in-raid flag) for a given item in a
+ *  single quest, or null if the quest doesn't hand over this item. */
+export function questItemReq(task: UsedInTask, itemId: string): QuestItemReq | null {
   for (const o of task.objectives ?? []) {
     if (o.__typename !== 'TaskObjectiveItem') continue
-    if (o.item?.id === itemId) return o.count ?? null
-    if (o.items?.some((i) => i.id === itemId)) return o.count ?? null
+    const matches = o.item?.id === itemId || (o.items?.some((i) => i.id === itemId) ?? false)
+    if (!matches) continue
+    return { count: o.count ?? null, foundInRaid: o.foundInRaid ?? false }
   }
   return null
+}
+
+/** Count of a given item required by a single quest's item-handover objectives. */
+export function questItemCount(task: UsedInTask, itemId: string): number | null {
+  return questItemReq(task, itemId)?.count ?? null
 }
 
 export function keepSellVerdict(opts: {
